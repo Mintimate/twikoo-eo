@@ -19,7 +19,6 @@ import {
   getUrlQuery,
   getUrlsQuery,
   parseComment,
-  parseCommentForAdmin,
   normalizeMail,
   equalsMail,
   getMailMd5,
@@ -113,6 +112,17 @@ setCustomLibs({
 const md5 = getMd5()
 const sha256 = getSha256()
 const xml2js = getXml2js()
+
+/**
+ * 为管理后台解析评论
+ * 注：EdgeOne Pages 环境不支持 ip2region，暂不提供 IP 归属地功能
+ */
+function parseCommentForAdmin(comments) {
+  for (const comment of comments) {
+    comment.ipRegion = ''
+  }
+  return comments
+}
 
 // 全局变量
 let config = null
