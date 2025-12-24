@@ -1,29 +1,26 @@
 # Twikoo EdgeOne Pages 版本
 
-🚀 **专为腾讯云 EdgeOne Pages 平台优化的 Twikoo 评论系统**
-
-本版本是 twikoo 项目针对 EdgeOne Pages 平台的适配版本，提供了简化的部署方案和优化的性能表现。
-
 <a href="https://twikoo.js.org/"><img src="./docs/static/logo.png" width="300" alt="Twikoo"></a>
-
-----
 
 [![](https://img.shields.io/npm/l/twikoo)](./LICENSE)
 
-一个**简洁**、**安全**、**免费**的静态网站评论系统。<br>
-A **simple**, **safe**, **free** comment system.  
+专为腾讯云 EdgeOne Pages 平台优化的 [Twikoo](https://github.com/twikoojs/twikoo) 评论系统后端。
 
-## 特色 | Features
+**简洁** · **安全** · **免费**
 
-* 免费搭建（使用 EdgeOne Pages 部署评论后台）
-* 简单部署（支持 EdgeOne Pages 一键部署）
+## 特性
 
+- 基于 EdgeOne Pages 边缘计算，全球加速
+- 使用 KV 存储，无需额外数据库
+- 支持邮件通知、即时消息推送
+- 一键部署，开箱即用
 
 ## 快速上手 | Quick Start
 
 Twikoo 的完整教程，参考 Twikoo 官方项目: https://github.com/twikoojs/twikoo 以及 Twikoo 的[快速上手](https://twikoo.js.org/quick-start.html)
 
-本项目只是适配了 EdgeOne Pages 平台的服务端，所以在部署时，需要注意以下几点：
+1. 登录 [EdgeOne Pages 控制台](https://console.cloud.tencent.com/edgeone/pages)
+2. 创建新项目，关联本仓库（或 Fork 后关联）
 
 ### EdgeOne Pages 部署 | EdgeOne Pages Deployment
 
@@ -45,7 +42,7 @@ Twikoo 的完整教程，参考 Twikoo 官方项目: https://github.com/twikoojs
    - 将 KV 命名空间绑定到项目，变量名设为：`TWIKOO_KV`
 
 4. **触发部署**
-   - 推送代码到仓库，EdgeOne Pages 会自动触发部署。或者直接本地`edgeone pages deploy`部署。
+   - 推送代码到仓库，EdgeOne Pages 会自动触发部署。或者直接本地`edgeone pages link`、`edgeone pages deploy`部署。
    - 部署完成后，获取你的 EdgeOne Pages 地址作为 twikoo 的环境配置
 
 5. **前端配置**
