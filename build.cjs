@@ -68,7 +68,7 @@ if (allFilesExist) {
   console.log('构建完成！所有文件已就绪。')
   console.log('')
   console.log('项目结构：')
-  console.log('  node-functions/[[default]].js - Node Function 主入口')
+  console.log('  node-functions/index.js       - Node Function 主入口')
   console.log('  edge-functions/api/kv.js      - Edge Function KV API')
   console.log('')
   console.log('部署说明：')
