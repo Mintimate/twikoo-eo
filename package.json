@@ -16,15 +16,15 @@
     "build": "node build.cjs"
   },
   "dependencies": {
-    "uuid": "^8.3.2",
-    "nodemailer": "^6.9.0",
-    "pushoo": "^0.1.0",
     "akismet-api": "^6.0.0",
-    "axios": "^1.6.0",
+    "axios": "^1.13.2",
     "blueimp-md5": "^2.19.0",
-    "crypto-js": "^4.2.0"
+    "crypto-js": "^4.2.0",
+    "nodemailer": "^7.0.12",
+    "pushoo": "^0.1.11",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "esbuild": "^0.20.0"
+    "esbuild": "^0.27.2"
   }
 }
