@@ -131,6 +131,20 @@ function getCorsHeaders(request) {
 // ==================== 工具函数 ====================
 
 function generateUUID() {
+  // 使用 Web Crypto API 生成标准 UUID v4（EdgeOne Edge Function 支持）
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, '') // 移除连字符保持 32 位格式
+  }
+  // 降级方案：使用 crypto.getRandomValues 获取更高质量的随机数
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const bytes = new Uint8Array(16)
+    crypto.getRandomValues(bytes)
+    // 设置 UUID v4 版本位
+    bytes[6] = (bytes[6] & 0x0f) | 0x40
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+  }
+  // 保底: 原始实现
   return 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/[x]/g, () => {
     return (Math.random() * 16 | 0).toString(16)
   })
