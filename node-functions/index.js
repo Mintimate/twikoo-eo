@@ -6,7 +6,7 @@
  * 使用 twikoo-func 实现核心逻辑，通过 Edge Function 操作 KV 数据库
  */
 
-import nodemailerReal from 'nodemailer'
+import * as nodemailerReal from 'nodemailer'
 import bowser from 'bowser'
 import {
   addQQMailSuffix,
