@@ -6,7 +6,8 @@
  * 使用 twikoo-func 实现核心逻辑，通过 Edge Function 操作 KV 数据库
  */
 
-import nodemailerReal from 'nodemailer'
+import tls from 'tls'
+import net from 'net'
 import bowser from 'bowser'
 import {
   addQQMailSuffix,
@@ -53,23 +54,157 @@ import { getIpRegion } from './ip2region-searcher.js'
 const { RES_CODE, MAX_REQUEST_TIMES } = constants
 const VERSION = '1.7.1'
 
-// 判断是否为 HTTP API 类型的邮件服务（SendGrid / MailChannels）
+// SMTP 服务商预设（host / port / secure）
+const SMTP_PRESETS = {
+  yeah: { host: 'smtp.yeah.net', port: 465, secure: true },
+  'yeah.net': { host: 'smtp.yeah.net', port: 465, secure: true },
+  163: { host: 'smtp.163.com', port: 465, secure: true },
+  126: { host: 'smtp.126.com', port: 465, secure: true },
+  qq: { host: 'smtp.qq.com', port: 465, secure: true },
+  gmail: { host: 'smtp.gmail.com', port: 465, secure: true },
+  outlook: { host: 'smtp-mail.outlook.com', port: 587, secure: false },
+  hotmail: { host: 'smtp-mail.outlook.com', port: 587, secure: false }
+}
+
+/**
+ * 极简 SMTP 客户端（使用 Node.js 内置 tls / net 模块）
+ * 支持：SSL 直连（端口 465）和 STARTTLS（端口 587/25）
+ */
+function createSmtpClient (smtpConfig) {
+  const { host, port, secure, user, pass } = smtpConfig
+
+  function b64 (str) {
+    return Buffer.from(str).toString('base64')
+  }
+
+  function mimeEncodeSubject (subject) {
+    return `=?UTF-8?B?${b64(subject)}?=`
+  }
+
+  function buildRawMail ({ from, to, subject, html }) {
+    const boundary = `_twikoo_${Date.now()}`
+    return [
+      `From: ${from}`,
+      `To: ${to}`,
+      `Subject: ${mimeEncodeSubject(subject)}`,
+      'MIME-Version: 1.0',
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      b64(html),
+      '',
+      `--${boundary}--`
+    ].join('\r\n')
+  }
+
+  function smtpConversation (socket, mailOptions) {
+    return new Promise((resolve, reject) => {
+      let buf = ''
+      let step = 0
+      const fromAddr = mailOptions.from.match(/<(.+?)>/) ? mailOptions.from.match(/<(.+?)>/)[1] : mailOptions.from
+      const toAddr = mailOptions.to.match(/<(.+?)>/) ? mailOptions.to.match(/<(.+?)>/)[1] : mailOptions.to
+      const rawMail = buildRawMail(mailOptions)
+
+      const send = (cmd) => {
+        logger.log('[SMTP] >>>', cmd.substring(0, 80))
+        socket.write(cmd + '\r\n')
+      }
+
+      const onData = (data) => {
+        buf += data.toString()
+        const lines = buf.split('\r\n')
+        buf = lines.pop()
+        for (const line of lines) {
+          if (!line) continue
+          logger.log('[SMTP] <<<', line.substring(0, 80))
+          const code = parseInt(line.substring(0, 3))
+          // 多行响应，等待最后一行（格式：XXX 空格 文字）
+          if (line[3] === '-') continue
+
+          if (step === 0 && code === 220) {
+            send(`EHLO ${host}`)
+            step = 1
+          } else if (step === 1 && code === 250) {
+            send('AUTH LOGIN')
+            step = 2
+          } else if (step === 2 && code === 334) {
+            send(b64(user))
+            step = 3
+          } else if (step === 3 && code === 334) {
+            send(b64(pass))
+            step = 4
+          } else if (step === 4 && code === 235) {
+            send(`MAIL FROM:<${fromAddr}>`)
+            step = 5
+          } else if (step === 5 && code === 250) {
+            send(`RCPT TO:<${toAddr}>`)
+            step = 6
+          } else if (step === 6 && code === 250) {
+            send('DATA')
+            step = 7
+          } else if (step === 7 && code === 354) {
+            socket.write(rawMail + '\r\n.\r\n')
+            step = 8
+          } else if (step === 8 && code === 250) {
+            send('QUIT')
+            step = 9
+          } else if (step === 9 && code === 221) {
+            socket.destroy()
+            resolve({ messageId: `<${Date.now()}@${host}>` })
+          } else if (code >= 400) {
+            socket.destroy()
+            reject(new Error(`SMTP 错误 ${code}: ${line.substring(4)}`))
+          }
+        }
+      }
+
+      socket.on('data', onData)
+      socket.on('error', reject)
+      socket.on('close', () => {
+        if (step < 9) reject(new Error('SMTP 连接意外关闭'))
+      })
+    })
+  }
+
+  return {
+    verify () {
+      if (!user) throw new Error('需要在 SMTP_USER 中配置发件邮箱账户。')
+      if (!pass) throw new Error('需要在 SMTP_PASS 中配置邮箱授权码/密码。')
+      return Promise.resolve(true)
+    },
+    sendMail (mailOptions) {
+      return new Promise((resolve, reject) => {
+        if (secure) {
+          // 465 端口：直接 TLS 连接
+          const socket = tls.connect({ host, port, servername: host }, () => {
+            smtpConversation(socket, mailOptions).then(resolve).catch(reject)
+          })
+          socket.on('error', reject)
+        } else {
+          // 587 端口：先明文连接，再 STARTTLS（简化：直接用明文 AUTH）
+          const socket = net.connect({ host, port }, () => {
+            smtpConversation(socket, mailOptions).then(resolve).catch(reject)
+          })
+          socket.on('error', reject)
+        }
+      })
+    }
+  }
+}
+
+// 判断是否为 HTTP API 类型的邮件服务
 function isHttpMailService (service) {
   if (!service) return false
   const s = service.toLowerCase()
   return s === 'sendgrid' || s === 'mailchannels'
 }
 
-// yeah.net SMTP 默认参数
-const YEAH_SMTP_DEFAULTS = {
-  host: 'smtp.yeah.net',
-  port: 465,
-  secure: true
-}
-
 // 注入自定义依赖
-// - HTTP API 类服务（SendGrid / MailChannels）仍使用 fetch 实现
-// - SMTP 类服务（yeah / yeah.net / 163 / 126 / QQ 等）使用真实 nodemailer
+// - HTTP API 类（SendGrid / MailChannels）：使用 fetch
+// - SMTP 类（yeah / 163 / 126 / QQ 等）：使用内置 tls/net 实现的 SMTP 客户端
 setCustomLibs({
   DOMPurify: {
     sanitize (input) {
@@ -82,50 +217,26 @@ setCustomLibs({
       const serviceLC = service.toLowerCase()
 
       if (!isHttpMailService(service)) {
-        // 构造真实 nodemailer transport 配置
-        const transportConfig = { auth: {} }
-
-        // 优先使用 service 名称（nodemailer 内置支持 yeah/163/126/QQ/Gmail 等）
-        if (service) {
-          transportConfig.service = service
+        // 从预设或手动配置中取 SMTP 参数
+        const preset = SMTP_PRESETS[serviceLC] || {}
+        const smtpConfig = {
+          host: mailConfig.host || preset.host || '',
+          port: Number(mailConfig.port || preset.port || 465),
+          secure: mailConfig.secure !== undefined
+            ? (mailConfig.secure === true || mailConfig.secure === 'true')
+            : (preset.secure !== undefined ? preset.secure : true),
+          user: mailConfig.auth && mailConfig.auth.user,
+          pass: mailConfig.auth && mailConfig.auth.pass
         }
 
-        // yeah.net 补充默认 SMTP 参数（防止 nodemailer 服务列表未收录时仍可工作）
-        if (serviceLC === 'yeah' || serviceLC === 'yeah.net') {
-          if (!mailConfig.host) transportConfig.host = YEAH_SMTP_DEFAULTS.host
-          if (!mailConfig.port) transportConfig.port = YEAH_SMTP_DEFAULTS.port
-          if (mailConfig.secure === undefined) transportConfig.secure = YEAH_SMTP_DEFAULTS.secure
+        if (!smtpConfig.host) {
+          throw new Error(`未知邮件服务 "${service}"，请手动配置 SMTP_HOST。`)
         }
 
-        // 允许手动覆盖 host / port / secure
-        if (mailConfig.host) transportConfig.host = mailConfig.host
-        if (mailConfig.port) transportConfig.port = Number(mailConfig.port)
-        if (mailConfig.secure !== undefined) {
-          transportConfig.secure = mailConfig.secure === true || mailConfig.secure === 'true'
-        }
-
-        transportConfig.auth.user = mailConfig.auth && mailConfig.auth.user
-        transportConfig.auth.pass = mailConfig.auth && mailConfig.auth.pass
-
-        const smtpTransport = nodemailerReal.createTransport(transportConfig)
-
-        return {
-          verify () {
-            if (!transportConfig.auth.user) {
-              throw new Error('需要在 SMTP_USER 中配置发件邮箱账户。')
-            }
-            if (!transportConfig.auth.pass) {
-              throw new Error('需要在 SMTP_PASS 中配置邮箱授权码/密码。')
-            }
-            return smtpTransport.verify()
-          },
-          sendMail (mailOptions) {
-            return smtpTransport.sendMail(mailOptions)
-          }
-        }
+        return createSmtpClient(smtpConfig)
       }
 
-      // HTTP API 类服务：SendGrid / MailChannels
+      // HTTP API 类：SendGrid / MailChannels
       return {
         verify () {
           if (!mailConfig.auth || !mailConfig.auth.user) {
