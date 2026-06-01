@@ -17,7 +17,7 @@ console.log('')
 // 步骤 0: 生成 ip2region 数据文件
 console.log('步骤 0: 生成 ip2region 数据文件...')
 const ip2regionDbPath = path.join(srcDir, 'node_modules/@imaegoo/node-ip2region/data/ip2region.db')
-const ip2regionOutputPath = path.join(srcDir, 'node-functions/ip2region-data.js')
+const ip2regionOutputPath = path.join(srcDir, 'cloud-functions/ip2region-data.js')
 
 if (fs.existsSync(ip2regionDbPath)) {
   const dbBuffer = fs.readFileSync(ip2regionDbPath)
@@ -58,7 +58,7 @@ export default getIp2RegionBuffer
 `
 
   fs.writeFileSync(ip2regionOutputPath, jsContent)
-  console.log(`  ✓ 已生成: node-functions/ip2region-data.js (${(fs.statSync(ip2regionOutputPath).size / 1024 / 1024).toFixed(2)} MB)`)
+  console.log(`  ✓ 已生成: cloud-functions/ip2region-data.js (${(fs.statSync(ip2regionOutputPath).size / 1024 / 1024).toFixed(2)} MB)`)
 } else {
   console.log('  ✗ ip2region.db 不存在，跳过生成')
   console.log('    请先运行: npm install @imaegoo/node-ip2region')
@@ -99,9 +99,9 @@ console.log('')
 // 检查必要文件
 console.log('步骤 2: 检查项目文件...')
 const requiredFiles = [
-  'node-functions/index.js',
-  'node-functions/ip2region-searcher.js',
-  'node-functions/ip2region-data.js',
+  'cloud-functions/index.js',
+  'cloud-functions/ip2region-searcher.js',
+  'cloud-functions/ip2region-data.js',
   'edge-functions/api/kv.js',
   'package.json'
 ]
@@ -122,9 +122,9 @@ if (allFilesExist) {
   console.log('构建完成！所有文件已就绪。')
   console.log('')
   console.log('项目结构：')
-  console.log('  node-functions/index.js            - Node Function 主入口')
-  console.log('  node-functions/ip2region-searcher.js - IP 归属地查询器')
-  console.log('  node-functions/ip2region-data.js   - IP 数据库（自动生成）')
+  console.log('  cloud-functions/index.js            - Node Function 主入口')
+  console.log('  cloud-functions/ip2region-searcher.js - IP 归属地查询器')
+  console.log('  cloud-functions/ip2region-data.js   - IP 数据库（自动生成）')
   console.log('  edge-functions/api/kv.js           - Edge Function KV API')
   console.log('')
   console.log('部署说明：')
