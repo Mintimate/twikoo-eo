@@ -71,6 +71,8 @@ Twikoo 的完整教程，参考 Twikoo 官方项目: https://github.com/twikoojs
 
 5. **前端配置**
    ```html
+   <div id="tcomment"></div>
+   <script src="https://cdn.jsdelivr.net/npm/twikoo@1.7.15/dist/twikoo.min.js"></script>
    <script>
      twikoo.init({
        envId: 'your-edgeone-makers-url',  // EdgeOne Makers 地址
