@@ -72,8 +72,20 @@ const packagesToOverwrite = [
   // tencentcloud-sdk 体积大且不兼容
   'node_modules/tencentcloud-sdk-nodejs/tencentcloud/index.js',
   // nodemailer 在某些环境下有兼容性问题
-  'node_modules/nodemailer/lib/nodemailer.js'
+  'node_modules/nodemailer/lib/nodemailer.js',
 ]
+
+// xsschema 的可选 schema 转换器依赖未安装的包（effect, sury, @valibot/to-json-schema）
+// 文件名含哈希，需通过 glob 匹配
+const xsschemaDir = path.join(srcDir, 'node_modules/xsschema/dist')
+if (fs.existsSync(xsschemaDir)) {
+  const xsschemaFiles = fs.readdirSync(xsschemaDir)
+  for (const file of xsschemaFiles) {
+    if (/^(effect|sury|valibot)-.*\.js$/.test(file)) {
+      packagesToOverwrite.push(`node_modules/xsschema/dist/${file}`)
+    }
+  }
+}
 
 console.log('步骤 1: 覆写不兼容的包...')
 let overwriteCount = 0
@@ -85,8 +97,12 @@ for (const pkg of packagesToOverwrite) {
     if (!fs.existsSync(backupPath)) {
       fs.copyFileSync(filePath, backupPath)
     }
-    // 覆写为空模块
-    fs.writeFileSync(filePath, '// Overwritten for EdgeOne Makers compatibility\nmodule.exports = {};\n')
+    // 覆写为空模块（ESM 或 CJS）
+    const isEsm = pkg.includes('xsschema') || filePath.endsWith('.mjs')
+    const emptyModule = isEsm
+      ? '// Overwritten for EdgeOne Makers compatibility\nexport {};\n'
+      : '// Overwritten for EdgeOne Makers compatibility\nmodule.exports = {};\n'
+    fs.writeFileSync(filePath, emptyModule)
     console.log(`  ✓ 已覆写: ${pkg}`)
     overwriteCount++
   } else {
