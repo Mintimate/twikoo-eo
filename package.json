@@ -1,6 +1,6 @@
 {
   "name": "twikoo-edgeone-makers",
-  "version": "1.7.19",
+  "version": "1.7.24",
   "description": "Twikoo comment system backend for Tencent EdgeOne Makers",
   "author": "imaegoo <hello@imaegoo.com> (https://github.com/imaegoo)",
   "license": "MIT",
@@ -21,6 +21,7 @@
   "scripts": {
     "dev": "edgeone makers dev",
     "build": "node build.cjs",
+    "test": "node --experimental-vm-modules --test tests/*.test.cjs",
     "postinstall": "node build.cjs"
   },
   "dependencies": {
@@ -28,7 +29,7 @@
     "@imaegoo/node-ip2region": "^2.1.1",
     "bowser": "^2.13.1",
     "pako": "^2.1.0",
-    "twikoo-func": "^1.7.19",
+    "twikoo-func": "^1.7.24",
     "uuid": "^8.3.2",
     "xss": "^1.0.15"
   }
