@@ -12,6 +12,8 @@
 
 当前同步至 [Twikoo 1.7.24](https://github.com/twikoojs/twikoo/releases/tag/1.7.24)，建议前端也使用同版本。本次同步包含客户端字段类型校验、`HIDE_SPAM` 前台隐藏逻辑、最新评论纯文本转换，以及邮箱和链接的违禁词检测修复。`HIDE_SPAM=true` 时，作者和管理员也无法在前台看到垃圾评论，管理后台仍可审核。
 
+针对 [Issue #11](https://github.com/Mintimate/twikoo-eo/issues/11)，内嵌 Cap 改为在生成挑战、兑换结果或校验评论令牌时按需加载，健康检查、普通评论和外部 Cap 不再主动加载内嵌 Cap 模块。更新后需重新构建、部署，使平台重新打包依赖。
+
 ## ⚠️ 破坏性更新说明
 
 **存储后端已从 KV 迁移至 Blob，数据不会自动迁移。**

@@ -57,15 +57,6 @@ import { sendNotice, emailTest } from 'twikoo-func/utils/notify'
 import { uploadImage } from 'twikoo-func/utils/image'
 import logger from 'twikoo-func/utils/logger'
 import constants from 'twikoo-func/utils/constants'
-import capUtils from 'twikoo-func/utils/cap'
-
-const {
-  createCap,
-  kvStorage,
-  createChallenge,
-  redeemChallenge,
-  isBuiltinCap
-} = capUtils
 
 const { RES_CODE, MAX_REQUEST_TIMES } = constants
 const htmlToText = getHtmlToText()
@@ -659,7 +650,28 @@ function createBlobDatabase () {
   }
 }
 
-function createEoCap (db) {
+let capUtilsPromise
+
+function getCapUtils () {
+  if (!capUtilsPromise) {
+    // 使用可静态分析的路径，让平台打包 Cap 依赖并在首次使用时加载。
+    capUtilsPromise = import('twikoo-func/utils/cap.js')
+      .then(module => module.default)
+      .catch(error => {
+        capUtilsPromise = null
+        throw error
+      })
+  }
+  return capUtilsPromise
+}
+
+// 配置判断无需加载 Cap 服务端；外部 Cap 和其他验证码不加载内嵌实现。
+function isBuiltinCap (config) {
+  return config && config.CAPTCHA_PROVIDER === 'Cap' && !config.CAP_API_ENDPOINT
+}
+
+async function createEoCap (db) {
+  const { createCap, kvStorage } = await getCapUtils()
   return createCap(kvStorage({
     get: (k) => db.capGet(k),
     set: (k, v) => db.capSet(k, v),
@@ -1252,7 +1264,7 @@ async function checkCaptcha (event, ip) {
     const db = createBlobDatabase()
     await checkCapCaptcha({
       capToken: event.capToken,
-      cap: createEoCap(db)
+      cap: await createEoCap(db)
     })
   } else if (provider === 'Cap' && config.CAP_API_ENDPOINT && config.CAP_SECRET_KEY) {
     if (!event.capToken) {
@@ -1587,7 +1599,8 @@ async function handlePost (req, res) {
         if (!isBuiltinCap(config)) {
           result = { code: RES_CODE.FAIL, message: '内嵌 Cap 未启用' }
         } else {
-          const data = await createChallenge(createEoCap(db))
+          const { createChallenge } = await getCapUtils()
+          const data = await createChallenge(await createEoCap(db))
           result = { code: RES_CODE.SUCCESS, ...data }
         }
         break
@@ -1595,7 +1608,8 @@ async function handlePost (req, res) {
         if (!isBuiltinCap(config)) {
           result = { code: RES_CODE.FAIL, message: '内嵌 Cap 未启用' }
         } else {
-          const data = await redeemChallenge(createEoCap(db), event)
+          const { redeemChallenge } = await getCapUtils()
+          const data = await redeemChallenge(await createEoCap(db), event)
           result = { code: RES_CODE.SUCCESS, ...data }
         }
         break
