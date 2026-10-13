@@ -1,14 +1,15 @@
 {
   "name": "twikoo-edgeone-makers",
-  "version": "1.7.24",
-  "description": "Twikoo comment system backend for Tencent EdgeOne Makers",
+  "version": "2.0.13-eo.1",
+  "private": true,
+  "description": "Twikoo 2.x backend with EdgeOne Makers enhancements",
   "author": "imaegoo <hello@imaegoo.com> (https://github.com/imaegoo)",
   "license": "MIT",
   "type": "module",
   "main": "cloud-functions/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/twikoojs/twikoo.git"
+    "url": "https://github.com/Mintimate/twikoo-eo.git"
   },
   "homepage": "https://twikoo.js.org",
   "keywords": [
@@ -19,21 +20,32 @@
     "edge-computing"
   ],
   "scripts": {
-    "dev": "edgeone makers dev",
+    "dev": "npm run build && edgeone makers dev",
     "build": "node build.cjs",
-    "test": "node --experimental-vm-modules --test tests/*.test.cjs",
+    "test": "node --test tests/*.test.js",
+    "test:bundle": "node --test tests/bundle/*.test.js",
+    "check": "npm run build && npm test && npm run test:bundle",
+    "deploy": "npm run check && edgeone makers deploy",
     "postinstall": "node build.cjs"
   },
-  "dependencies": {
-    "@edgeone/pages-blob": "latest",
-    "@imaegoo/node-ip2region": "^2.1.1",
-    "bowser": "^2.13.1",
-    "pako": "^2.1.0",
-    "twikoo-func": "^1.7.24",
-    "uuid": "^8.3.2",
-    "xss": "^1.0.15"
+  "engines": {
+    "node": ">=20.19.0"
   },
-  "overrides": {
-    "pushoo": "0.1.12"
+  "dependencies": {
+    "@edgeone/pages-blob": "0.0.18",
+    "@twikoojs/common": "2.0.13",
+    "@twikoojs/shared": "2.0.13",
+    "@xsai/generate-text": "0.5.0",
+    "bowser": "2.14.1",
+    "html-to-text": "10.0.1",
+    "marked": "18.0.13",
+    "pako": "3.0.2",
+    "pushoo": "2.0.13",
+    "xml2js": "0.6.2",
+    "xss": "1.0.15"
+  },
+  "devDependencies": {
+    "@imaegoo/node-ip2region": "2.1.1",
+    "esbuild": "0.28.2"
   }
 }
