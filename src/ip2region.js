@@ -6,7 +6,7 @@
  * 基于 @imaegoo/node-ip2region 的 memorySearchSync 方法改写
  */
 
-import { getIp2RegionBuffer } from './ip2region-data.js'
+import { getIp2RegionBuffer } from './generated/ip2region-data.js'
 
 const INDEX_BLOCK_LENGTH = 12
 
@@ -55,7 +55,7 @@ function initDatabase () {
   dbBuffer = getIp2RegionBuffer()
   firstIndexPtr = getLong(dbBuffer, 0)
   lastIndexPtr = getLong(dbBuffer, 4)
-  totalBlocks = ((lastIndexPtr - firstIndexPtr) / INDEX_BLOCK_LENGTH) | 0 + 1
+  totalBlocks = (lastIndexPtr - firstIndexPtr) / INDEX_BLOCK_LENGTH + 1
 }
 
 /**
@@ -76,7 +76,7 @@ export function searchSync (ip) {
   }
 
   let l = 0
-  let h = totalBlocks
+  let h = totalBlocks - 1
   let sip = 0
   let m = 0
   let p = 0
@@ -114,44 +114,4 @@ export function searchSync (ip) {
   }
 
   return null
-}
-
-/**
- * 获取 IP 属地（简化版）
- * @param {string} ip - IPv4 地址
- * @param {boolean} detail - 是否返回详细信息
- * @returns {string} 归属地字符串
- */
-export function getIpRegion (ip, detail = false) {
-  if (!ip) return ''
-
-  try {
-    // 将 IPv6 格式的 IPv4 地址转换为 IPv4 格式
-    ip = ip.replace(/^::ffff:/, '')
-    // 去掉端口号
-    ip = ip.replace(/:[0-9]*$/, '')
-
-    const result = searchSync(ip)
-    if (!result || !result.region) return ''
-
-    // region 格式: 中国|0|广东省|深圳市|电信
-    const [country, , province, city, isp] = result.region.split('|')
-
-    // 有省显示省，没有省显示国家
-    const area = province && province.trim() && province !== '0' ? province : country
-
-    if (detail) {
-      return area === city ? [city, isp].join(' ') : [area, city, isp].join(' ')
-    } else {
-      return area.replace(/(省|市)$/, '')
-    }
-  } catch (e) {
-    console.warn('IP 属地查询失败：', e.message, ip)
-    return ''
-  }
-}
-
-export default {
-  searchSync,
-  getIpRegion
 }
