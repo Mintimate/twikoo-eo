@@ -13,6 +13,7 @@ import {
 } from '@twikoojs/common'
 import { VERSION } from '@twikoojs/shared'
 import xss from 'xss'
+import { enhanceDatabase, installEnhancements } from './enhancements.js'
 import { createEoNodemailer, createMailBridgeContext, withMailBridgeContext } from './mail.js'
 import { AkismetClient } from './akismet.js'
 import { searchSync } from './ip2region.js'
@@ -70,6 +71,7 @@ setLibImporter(specifier => {
   if (!Object.hasOwn(libraryLoaders, specifier)) throw new Error(`Makers 未启用依赖 ${specifier}`)
   return libraryLoaders[specifier]()
 })
+installEnhancements()
 
 let throttleWindowStarted = Date.now()
 
@@ -153,7 +155,7 @@ export function createHandler ({ store, env = {} } = {}) {
       throttleWindowStarted = Date.now()
     }
     const runtimeEnv = { ...process.env, ...env, ...context.env }
-    const db = withDeploymentConfig(new BlobKvDatabase(await getStore()), runtimeEnv)
+    const db = withDeploymentConfig(enhanceDatabase(new BlobKvDatabase(await getStore())), runtimeEnv)
     return withMailBridgeContext(createMailBridgeContext(request, runtimeEnv), async () => {
       const handler = createTwikooHandler(scaffoldAdapters({
         request: { toTkRequest: () => request },
