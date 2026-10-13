@@ -22,6 +22,10 @@
   "scripts": {
     "dev": "npm run build && edgeone makers dev",
     "build": "node build.cjs",
+    "test": "node --test tests/*.test.js",
+    "test:bundle": "node --test tests/bundle/*.test.js",
+    "check": "npm run build && npm test && npm run test:bundle",
+    "deploy": "npm run check && edgeone makers deploy",
     "postinstall": "node build.cjs"
   },
   "engines": {
